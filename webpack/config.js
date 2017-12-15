@@ -6,8 +6,8 @@ module.exports = {
         env: {NODE_ENV: '"production"'},
         index: path.resolve(__dirname, '../dist/index.html'),
         assetsRoot: path.resolve(__dirname, '../dist'),
-        assetsSubDirectory: 'static',
-        assetsPublicPath: '/dist/',
+        assetsSubDirectory: 'static/',
+        assetsPublicPath: '/',
         productionSourceMap: true,
         productionGzip: false,
         productionGzipExtensions: ['js', 'css']
@@ -18,7 +18,7 @@ module.exports = {
         assetsSubDirectory: 'static',
         assetsPublicPath: '/',
         context: [ //代理路径
-
+            
         ],
         proxypath: '',
         cssSourceMap: false

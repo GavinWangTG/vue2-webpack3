@@ -1,3 +1,6 @@
+/*
+* 第二种打包方式，节约打包时间（几秒钟），缺点须写两套配置
+*/
 
 const pkg = require('../package.json');
 const path = require('path');
@@ -6,6 +9,11 @@ const config = require('./config.js');
 const utils = require('./util.js');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const ExtractTextPlugin = require("extract-text-webpack-plugin");
+const autoprefixer = require('autoprefixer');
+
+function resolve (dir) {
+  return path.join(__dirname, '..', dir)
+}
 
 const extractCSS = new ExtractTextPlugin(utils.assetsPath('css/style.[chunkhash:8].css')); //配置外部css单独打包到文件
 const extractSCSS = new ExtractTextPlugin(utils.assetsPath('css/[name].[chunkhash:8].css')); //配置布局scss单独打包到文件
@@ -16,6 +24,7 @@ module.exports = {
 	},
 	output: {
 		path: config.build.assetsRoot,
+		publicPath: process.env.NODE_ENV === 'production' ? config.build.assetsPublicPath : config.dev.assetsPublicPath,
 		filename: utils.assetsPath('js/[name].[chunkhash:8].js'),
 		chunkFilename: utils.assetsPath('js/[name].[chunkhash:8].js')
 	},
@@ -23,6 +32,7 @@ module.exports = {
 		extensions: ['.js', '.json', '.vue'],
 		alias: {
             vue$: 'vue/dist/vue.js',
+            '@': resolve('app')
         }
 	},
 	resolveLoader: {
@@ -38,11 +48,14 @@ module.exports = {
 			{
 				test: /\.vue$/,
 				loader: 'vue-loader',
-				//不建议直接在.vue文件中写style样式(该配置还不完善)
 				options: {
 		          	loaders: {
-		            	css: ExtractTextPlugin.extract({
-			              	use: 'css-loader',
+		            	scss: ExtractTextPlugin.extract({
+			              	use: [
+			              		{ loader: 'style-loader'},
+		          				{ loader: 'css-loader'},
+		          				{ loader: 'sass-loader'}
+		          			],
 			              	fallback: 'vue-style-loader'
 		            	})
 		          	}
@@ -50,33 +63,36 @@ module.exports = {
 			},
 			{
 				test: /\.css$/,
-				exclude: /node_modules/,
-				use: extractCSS.extract(['css-loader' ])
+				use: extractCSS.extract({
+					fallback: "style-loader",
+					use:[
+                        {
+                            loader: 'css-loader',
+                            options:{
+                                minimize: true //css压缩
+                            }
+                        }
+                    ]
+				})
 			},
 			{
-				test: /\.scss$/i,
-				exclude: /node_modules/,
-		        use: extractSCSS.extract([
-		        	{loader: 'css-loader'},
-		        	{loader: 'sass-loader'},
-		        	{
-		        		loader: 'postcss-loader',
-	          			options: {
-	          				plugins: (loader)=>[
-				                require('autoprefixer')({
-				                    browsers: ['iOS >= 7', 'Android >= 4.1', 
-										'last 10 Chrome versions', 'last 10 Firefox versions', 
-										'Safari >= 6', 'ie > 8'
-									]
-				                })
-				            ]
-	          			}
-		        	}
-		        ])
-			},
+	        	test: /\.scss$/,
+	            use: extractSCSS.extract({
+	                fallback: "style-loader",
+	                use: [
+	                	{
+	                		loader: 'css-loader',
+	                		options:{
+                                minimize: true //css压缩
+                            }
+	                	},
+	                	{loader: 'postcss-loader'},
+	                	{loader: 'sass-loader'},
+	                ]
+	            })
+		    },
 			{
 				test: /\.(png|jpg|jpeg|svg|gif)(\?.*)?$/,
-				exclude: /node_modules/,
 				use: [
 					{
 						loader: 'file-loader',
@@ -88,7 +104,6 @@ module.exports = {
 			},
 			{
 				test: /\.(woff|woff2|eot|ttf|otf)(\?.*)?$/,
-				exclude: /node_modules/,
 				use: [
 					{
 						loader: 'file-loader',
@@ -114,9 +129,7 @@ module.exports = {
 	},
 	plugins: [
 		new webpack.DefinePlugin({
-            'process.env': {
-                NODE_ENV: JSON.stringify('production')
-            }
+            'process.env.NODE_ENV': JSON.stringify('production')
         }),
 		//js 代码压缩
 		new webpack.optimize.UglifyJsPlugin({
@@ -128,9 +141,13 @@ module.exports = {
 		new HtmlWebpackPlugin({
             template: './index.html'
         }),
-        //提取css到文件夹中
+        //提取css到文件夹中(第一种方式，外部引入的css 和 项目所写的scss单独打包)
         extractCSS,
         extractSCSS,
+        //提取css到文件夹中(第二种方式，所有文件都打包到一个文件中)
+ 		// new ExtractTextPlugin(utils.assetsPath("css/[name].[chunkhash:8].css"),{
+ 		// 	allChunks: true
+ 		// }),
 		//提取公共js
 		new webpack.optimize.CommonsChunkPlugin({
             name: 'vendor',
